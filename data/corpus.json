@@ -1,0 +1,27 @@
+[
+  {
+    "id": "resena-1",
+    "fuente": "Reseña de Ana",
+    "texto": "Los auriculares Nova X suenan excelente y son comodos. Muy conforme con la bateria. Los recomiendo."
+  },
+  {
+    "id": "resena-2",
+    "fuente": "Reseña de Luis",
+    "texto": "Estoy furioso con los Nova X: la entrega tuvo una demora de 12 dias. Pesimo servicio y una queja abierta."
+  },
+  {
+    "id": "resena-3",
+    "fuente": "Reseña de Marta",
+    "texto": "Buena calidad de sonido en los Nova X, aunque el estuche es malo y el paquete llego tarde."
+  },
+  {
+    "id": "resena-4",
+    "fuente": "Reseña de Sofía",
+    "texto": "Recomiendo los Nova X. Llegaron rapido, la bateria es buena y el uso diario es comodo."
+  },
+  {
+    "id": "ficha-novax",
+    "fuente": "Ficha de producto",
+    "texto": "Ficha tecnica del auricular Nova X. Precio de venta 89990 pesos. Costo de reposicion 40000 pesos. Categoria auriculares."
+  }
+]

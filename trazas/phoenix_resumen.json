@@ -1,0 +1,6 @@
+{
+  "orquestador_consulta_spans": 7,
+  "latencia_ms_p95": 33986.1,
+  "latencia_ms_p50": 25189.85,
+  "tokens_prompt_ejemplo": null
+}

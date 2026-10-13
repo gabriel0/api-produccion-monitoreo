@@ -1,0 +1,125 @@
+# Por defecto: Redis + Phoenix + API.
+# Ollama queda en el host (Windows/macOS usan GPU/DirectML/Vulkan).
+# En Docker sin GPU, qwen2.5:14b corre 100% CPU y una corrida que en local
+# tarda segundos puede demorar muchos minutos.
+#
+# Stack rápido (recomendado):
+#   1) Ollama en el host (ollama serve / levantar.py)
+#   2) docker compose up --build -d
+#
+# Ollama también en Docker (lento en CPU, útil en Linux con NVIDIA):
+#   docker compose --profile ollama-docker up --build -d
+#   y setear OLLAMA_BASE_URL=http://ollama:11434 en el servicio api.
+
+services:
+  redis:
+    image: redis/redis-stack-server:latest
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  phoenix:
+    image: arizephoenix/phoenix:latest
+    ports:
+      - "6006:6006"
+    environment:
+      PHOENIX_HOST: 0.0.0.0
+      PHOENIX_PORT: "6006"
+      PHOENIX_WORKING_DIR: /phoenix
+    volumes:
+      - phoenix-data:/phoenix
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python3",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:6006/')",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 45s
+
+  api:
+    build: .
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env.example
+      - path: .env
+        required: false
+    environment:
+      REDIS_URL: redis://redis:6379
+      # Siempre el host: 127.0.0.1 dentro del contenedor NO es Ollama del host.
+      # El .env puede tener 127.0.0.1 para uvicorn local; acá no lo heredar.
+      OLLAMA_BASE_URL: http://host.docker.internal:11434
+      LLM_PROVIDER: ${LLM_PROVIDER:-ollama}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
+      GEMINI_MODEL: ${GEMINI_MODEL:-gemini-2.0-flash}
+      PHOENIX_URL: http://phoenix:6006
+      PHOENIX_ENDPOINT: http://phoenix:6006/v1/traces
+      API_HOST: 0.0.0.0
+    volumes:
+      - ./data:/srv/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    depends_on:
+      redis:
+        condition: service_healthy
+      phoenix:
+        condition: service_healthy
+
+  # --- opcional: Ollama dentro de Docker (profile ollama-docker) ---
+  ollama:
+    profiles: ["ollama-docker"]
+    image: ollama/ollama:latest
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    environment:
+      OLLAMA_KEEP_ALIVE: ${OLLAMA_KEEP_ALIVE:-2m}
+      OLLAMA_MAX_LOADED_MODELS: "1"
+      OLLAMA_NUM_PARALLEL: "1"
+    deploy:
+      resources:
+        limits:
+          cpus: "6.0"
+          memory: 12G
+    healthcheck:
+      test: ["CMD-SHELL", "ollama list || exit 1"]
+      interval: 10s
+      timeout: 10s
+      retries: 12
+      start_period: 20s
+
+  ollama-init:
+    profiles: ["ollama-docker"]
+    image: ollama/ollama:latest
+    depends_on:
+      ollama:
+        condition: service_healthy
+    environment:
+      OLLAMA_HOST: http://ollama:11434
+      OLLAMA_MODEL: ${OLLAMA_MODEL:-qwen2.5:14b}
+      OLLAMA_EMBED_MODEL: ${OLLAMA_EMBED_MODEL:-all-minilm}
+    entrypoint: ["/bin/sh", "-ec"]
+    command:
+      - |
+        echo "Verificando modelos en $$OLLAMA_HOST"
+        ollama show "$$OLLAMA_MODEL" >/dev/null 2>&1 || ollama pull "$$OLLAMA_MODEL"
+        ollama show "$$OLLAMA_EMBED_MODEL" >/dev/null 2>&1 || ollama pull "$$OLLAMA_EMBED_MODEL"
+        echo "Modelos listos."
+    restart: "no"
+
+volumes:
+  redis-data:
+  ollama-data:
+  phoenix-data:

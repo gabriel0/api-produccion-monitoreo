@@ -1,0 +1,10 @@
+.venv/
+.cache/
+.phoenix/
+__pycache__/
+*.pyc
+.env
+data/ajustes.jsonl
+trazas/*.log
+trazas/carga.json
+trazas/infra.json
